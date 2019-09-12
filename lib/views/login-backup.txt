@@ -1,0 +1,259 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sistesi/page/home.dart';
+import 'package:http/http.dart' as http;
+
+// class response json
+class Response {
+  final String status;
+  final String message;
+
+  Response({this.status, this.message});
+
+  factory Response.fromJson(Map<String, dynamic> json) {
+    return Response(
+      status: json['status'],
+      message: json['message'],
+    );
+  }
+}
+
+class Login extends StatefulWidget {
+  @override
+  _LoginState createState() => _LoginState();
+}
+
+class _LoginState extends State<Login> {
+  // variabel member class
+  final _username = TextEditingController();
+  final _password = TextEditingController();
+  // member response
+  String _response = '';
+  bool _apiCall = false;
+  // login shared prefs
+  bool alreadyLogin = false;
+
+  // fungsi untuk kirim http post
+  Future<Response> post(String url, var body) async {
+    return await http.post(Uri.encodeFull(url),
+        body: body,
+        headers: {"Accept": "application/json"}).then((http.Response response) {
+      final int statusCode = response.statusCode;
+
+      if (statusCode < 200 || statusCode > 400 || json == null) {
+        throw new Exception("Error while fetching data");
+      }
+      return Response.fromJson(json.decode(response.body));
+    });
+  }
+
+  // fungsi panggil API
+  void _callPostAPI() {
+    post('https://dev.sistesi.id/dvlpr/wsdev/public/loginCombine', {
+      'username': _username.text,
+      'password': _password.text
+    }).then((response) async {
+      // jika respon normal
+      setState(() {
+        _apiCall = false;
+        _response = response.message;
+      });
+
+      if (response.status == "success") {
+        // simpan shared prefs
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        setState(() {
+          alreadyLogin = true;
+          prefs.setBool('login', alreadyLogin);
+        });
+
+        // menuju route page home
+        Navigator.push(
+            context, MaterialPageRoute(builder: (context) => Home()));
+      }
+    },
+        // jika respon error
+        onError: (error) {
+      _apiCall = false;
+      _response = error.toString();
+    });
+  }
+
+  Widget progressWidget() {
+    if (_apiCall)
+      // jika masih proses kirim API
+      return AlertDialog(
+        content: new Column(
+          children: <Widget>[CircularProgressIndicator(), Text("Please wait")],
+        ),
+      );
+    else
+      // jika sudah selesai kirim API
+      return Center(
+        child: Text(
+          _response,
+          style: new TextStyle(fontSize: 15.0),
+        ),
+      );
+  }
+
+  Future<bool> getLoginStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    bool loginStatus = prefs.getBool('login') ?? false;
+    print('login status $loginStatus');
+    return loginStatus;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+        future: getLoginStatus(),
+        builder: (context, snapshot) {
+          return (snapshot.data)
+              ?
+              // jika sudah login tampilkan page home
+              new Home()
+              :
+              // jika belum login tampilkan page login
+              loginForm();
+          // new Home();
+        });
+  }
+
+  Widget loginForm() {
+    final _formKey = GlobalKey<FormState>();
+    return Form(
+      key: _formKey,
+      child: SingleChildScrollView(
+        child: Container(
+          padding: EdgeInsets.only(top: 100.0, left: 20.0, right: 20.0),
+          child: Column(
+            children: <Widget>[
+              new Image(
+                image: AssetImage('assets/index.png'),
+                width: 150.0,
+                height: 150.0,
+                fit: BoxFit.cover,
+              ),
+              new Padding(
+                padding: EdgeInsets.all(8.0),
+              ),
+              new TextFormField(
+                decoration: new InputDecoration(
+                  labelText: "Kode Sekolah",
+                  fillColor: Colors.grey[100],
+                  filled: true,
+                  contentPadding: EdgeInsets.fromLTRB(10.0, 15.0, 70.0, 10.0),
+                  border: new OutlineInputBorder(
+                    borderRadius: new BorderRadius.circular(25.0),
+                    borderSide: new BorderSide(),
+                  ),
+                ),
+                style: new TextStyle(
+                  fontFamily: "Poppins",
+                ),
+              ),
+              new Padding(
+                padding: EdgeInsets.all(8.0),
+              ),
+              new TextFormField(
+                controller: _username,
+                decoration: new InputDecoration(
+                  labelText: "Nomer Induk Siswa / Kependidikan",
+                  fillColor: Colors.grey[100],
+                  filled: true,
+                  contentPadding: EdgeInsets.fromLTRB(10.0, 15.0, 10.0, 10.0),
+                  border: new OutlineInputBorder(
+                    borderRadius: new BorderRadius.circular(25.0),
+                    borderSide: new BorderSide(
+                      color: Colors.yellow[800],
+                    ),
+                  ),
+
+                  //fillColor: Colors.green
+                ),
+                validator: (val) {
+                  if (val.length == 0) {
+                    return "Email cannot be empty";
+                  } else {
+                    return null;
+                  }
+                },
+                style: new TextStyle(
+                  fontFamily: "Poppins",
+                ),
+              ),
+              new Padding(
+                padding: EdgeInsets.all(8.0),
+              ),
+              new TextFormField(
+                controller: _password,
+                obscureText: true,
+                decoration: new InputDecoration(
+                  labelText: "Password",
+                  fillColor: Colors.grey[100],
+                  filled: true,
+                  contentPadding: EdgeInsets.fromLTRB(10.0, 15.0, 70.0, 10.0),
+                  border: new OutlineInputBorder(
+                    borderRadius: new BorderRadius.circular(25.0),
+                    borderSide: new BorderSide(
+                      color: Colors.yellow[800],
+                    ),
+                  ),
+
+                  //fillColor: Colors.green
+                ),
+                validator: (val) {
+                  if (val.length == 0) {
+                    return "password cannot be empty";
+                  } else {
+                    return null;
+                  }
+                },
+                keyboardType: TextInputType.text,
+                style: new TextStyle(
+                  fontFamily: "Poppins",
+                ),
+              ),
+              new Padding(
+                padding: EdgeInsets.all(8.0),
+              ),
+              SizedBox(
+                width: double.infinity,
+                height: 50.0,
+                // match_parent
+                child: new RaisedButton(
+                  padding: EdgeInsets.all(15.0),
+                  shape: new RoundedRectangleBorder(
+                    borderRadius: new BorderRadius.circular(30.0),
+                  ),
+                  onPressed: () {
+                    if (_formKey.currentState.validate()) {
+                      // If the form is valid, display a Snackbar.
+                      setState(() {
+                        _apiCall = true;
+                      });
+                      _callPostAPI();
+                    }
+                  },
+                  color: Colors.blue[300],
+                  child: Text(
+                    "MASUK",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontFamily: "Poppins",
+                      fontSize: 15.0,
+                    ),
+                  ),
+                ),
+              ),
+              // panggil loading widget
+              progressWidget()
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
