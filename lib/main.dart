@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:sistesi/views/home.dart';
-import 'package:sistesi/views/root.dart';
+import 'views/root.dart';
+import 'views/home.dart';
 import 'views/login.dart';
 
 void main() => runApp(MaterialApp(

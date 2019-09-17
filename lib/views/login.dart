@@ -202,7 +202,9 @@ class _LoginState extends State<Login> {
                       borderRadius: new BorderRadius.circular(30.0),
                     ),
                     onPressed: () {
-                      login(_username.text, _password.text, _kodeSekolah.text);
+                      if (_formKey.currentState.validate()) {
+                        login(_username.text, _password.text, _kodeSekolah.text);
+                      }
                     },
                     color: Colors.blue[300],
                     child: Text(
